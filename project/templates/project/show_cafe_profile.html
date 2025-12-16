@@ -1,0 +1,156 @@
+<!-- File: show_cafe_profile.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the profile detail html template for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends 'project/base.html' %}
+
+{% block content %}
+
+<body>
+
+<h1>🍓 Cutie Pie Cafe Passport 🍰</h1>
+
+<div class="card">
+    <h2>Welcome, {{profile.display_name}}! 💖</h2>
+</div>
+
+<div class="card">
+    <h2>Your Café Wishlist 🎀✨</h2>
+
+    <a href="{% url 'add_to_wishlist' %}" class="btn btn-primary">Add New Cafe to Wishlist</a>
+
+    <!-- if there's a wishlist, iterate through the items inside -->
+    {% if wishlist %}
+        <div class="wishlist-grid">
+            <!-- for each item, add associated information -->
+            {% for item in wishlist %}
+                <a href="{% url 'show_cafe' item.cafe.pk %}" class="wishlist-card">
+
+                    
+                    <img src="{{ item.cafe.image|default:'https://img.freepik.com/premium-vector/cute-doodle-cup-coffee-saucer-isolated-white-background_361363-219.jpg' }}" 
+                        alt="{{ cafe.name }}" 
+                        class="wishlist-img"> 
+
+                    <div class="wishlist-info">
+                        <h3 class="wishlist-title">{{ item.cafe.name }}</h3>
+                        <p class="wishlist-address">📍 {{ item.cafe.address }}</p>
+                        
+                        <!-- if it's been visited, say so! -->
+                        {% if item.is_visited %} 
+                            <span class="wishlist-status visited">✓ Visited</span>
+                        {% else %}
+                            <span class="wishlist-status unvisited">⏳ Not yet</span>
+                        {% endif %}
+                    </div>
+
+                </a>
+            {% endfor %}
+        </div>
+
+    <!-- if empty, display a message-->
+    {% else %}
+        <p>No cafés added yet… go explore! 🐇💞</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Your Cafe Visits 🌸</h2>
+    <p>Click a visit to see your notes and pics 📸</p>
+
+    <!-- if there are visits, loop through them -->
+    {% if visits %}
+        <div class="visits-container">
+            <!-- for each, add in associated info -->
+            {% for v in visits %}
+            <div class="visit-card">
+                <a href="{% url 'visit_detail' v.visit.id %}">
+                    <img src="{{ v.image_url }}" class="visit-card-img" alt="Visit Photo">
+                    <p>{{ v.visit.date_visited|date:"M d, Y" }}</p>
+                    <p>{{ v.visit.cafe.name }}</p>
+                </a>
+            </div>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <p>No visits yet… go sip some lattes! ☕💖</p>
+    {% endif %}
+</div>
+
+
+<!-- theme changer -->
+<div class="card" style="margin-bottom: 20px; padding: 10px;">
+    <div id="theme-selector" style="display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 1.1em;">Change Theme:</h3>
+        <div>
+            <button data-theme="default" class="btn btn-primary">Default 🎀</button>
+            <button data-theme="dark" class="btn btn-primary">Midnight 🌑</button>
+            <button data-theme="forest" class="btn btn-primary">Forest 🌿</button>
+            <button data-theme="ocean" class="btn btn-primary">Ocean 🌊</button>
+            <button data-theme="roastery" class="btn btn-primary">Roastery ☕</button>
+            <button data-theme="lavender" class="btn btn-primary">Lavender 🪻</button>
+            <button data-theme="gothic" class="btn btn-primary">Gothic 🖤</button>
+        </div>
+    </div>
+</div>
+
+
+
+<footer>Made with 💖 and pastel magic 🌈</footer>
+
+<!-- theme changer script -->
+{% csrf_token %} 
+
+<script>
+// wait for html to be loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // reference container element with theme options 
+    const themeSelector = document.getElementById('theme-selector');
+
+    // retrives token value
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // listener for clikc
+    themeSelector.addEventListener('click', (e) => {
+        // clicked element
+        const themeName = e.target.dataset.theme;
+
+        // if its a valid themename, 
+        if (themeName) {
+            
+            // remove localStorage saving (had it before, it was making themes global?)
+            localStorage.removeItem('userTheme');
+            
+            // make an asynchronous POST request to  Django view
+            const url = `{% url 'update_theme_preference' theme_name='_PLACEHOLDER_' %}`.replace('_PLACEHOLDER_', themeName);
+
+            // initiates AJAX request to save theme preference in db
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({}) // send a body to satisfy Django's CSRF check
+            })
+            // handle response
+            .then(response => {
+                if (response.ok) {
+                    // apply the theme locally immediately (calling the function defined in base.html)
+                    window.setTheme(themeName); 
+                    console.log(`Theme set to ${themeName} and saved to database.`);
+                } else {
+                    console.error('Failed to save theme preference to the database.');
+                    // if saving fails, revert the theme or show an error
+                }
+            })
+            .catch(error => console.error('Error during theme update:', error));
+        }
+    });
+});
+</script>
+
+</body>
+
+{% endblock %}

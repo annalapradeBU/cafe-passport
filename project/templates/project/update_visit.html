@@ -1,0 +1,129 @@
+<!-- File: signup.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/03/2025 -->
+<!-- Description: the visit editing form for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div >
+    <h1>✏️ Edit Visit to {{ visit.cafe.name }}</h1>
+
+
+    <!-- part of the from -->
+    <form method="post" enctype="multipart/form-data">
+        
+        {% csrf_token %}
+
+        <div class="card">
+            <p class="text-muted">Editing visit from {{ visit.date_visited|date:"F j, Y" }}.</p>
+            <h2 class="h4">Visit Details</h2>
+            {{ form.non_field_errors }}
+            <!-- go through all the feild forms and add them in -->
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+        </div>
+        
+        <hr>
+
+        <!-- visit phots -->
+        <div class="card">
+            <h2 class="h4">📸 Visit Photos</h2>
+            {{ visit_photo_formset.management_form }}
+            <!-- iterate throigh visit photos form -->
+            {% for photo_form in visit_photo_formset %}
+                <div class="photo-item-form" id="{{ photo_form.prefix }}-container">
+                    <!-- show image if exiss-->
+                    {% if photo_form.instance.image %}
+                        <img src="{{ photo_form.instance.image.url }}" alt="Existing Photo" style="max-width: 150px; height: auto; margin-bottom: 10px;">
+                    {% endif %}
+
+                    <!-- show caption and such if exits -->
+                    {% for field in photo_form.visible_fields %}
+                        <div >
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+                    {% for field in photo_form.hidden_fields %}{{ field }}{% endfor %}
+                </div>
+            {% endfor %}
+            </div>
+
+        <hr>
+
+        <!-- favorite items update form -->
+        <div class="card">
+            <h2 class="h4">🍩 Favorite Items</h2>
+            {{ favorite_item_formset.management_form }}
+
+            <!-- go through the favoirte item form -->
+            {% for item_form in favorite_item_formset %}
+                <div class="favorite-item-form" id="{{ item_form.prefix }}-container">
+                    <h4>Item #{{ forloop.counter }} 
+                        <span >
+                            <!-- allow deletion if present -->
+                            {% if item_form.instance.pk %}
+                                {{ item_form.DELETE }} Delete
+                            {% endif %}
+                        </span>
+                    </h4>
+                    
+                    <!-- go throight visible form feilds and siaply them -->
+                    {% for field in item_form.visible_fields %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
+
+                    <!-- hide the hidden form feilds-->
+                    {% for field in item_form.hidden_fields %}{{ field }}{% endfor %}
+
+                    <!-- if associated image, show options -->
+                    {% if item_form.nested_photo_formset %}
+                        <div >
+                            <h5 class="h6">Item Photos</h5>
+                            {{ item_form.nested_photo_formset.management_form }}
+                            
+                            <!-- show item photo form-->
+                            {% for photo_form in item_form.nested_photo_formset %}
+                                <div class="nested-photo-item">
+                                    <!-- show image if present-->
+                                    {% if photo_form.instance.image %}
+                                        <img src="{{ photo_form.instance.image.url }}" alt="Existing Item Photo" style="max-width: 80px; height: auto; margin-right: 10px;">
+                                    {% endif %}
+                                    <!-- show feilds if present -->
+                                    {% for field in photo_form.visible_fields %}
+                                        <div>{{ field.label }}: {{ field }}</div>
+                                    {% endfor %}
+                                    {% for field in photo_form.hidden_fields %}{{ field }}{% endfor %}
+                                    <span >{{ photo_form.DELETE }} Delete</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            </div>
+
+            <!-- submit button-->
+        <button type="submit" class="btn">Save Changes</button>
+        <a href="{% url 'visit_detail' visit.pk %}" class="btn">Cancel</a>
+
+    </form>
+</div>
+
+{% endblock content %}

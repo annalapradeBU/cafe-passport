@@ -1,0 +1,575 @@
+<!-- File: show_cafe.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 09/26/2025 -->
+<!-- Description: the visit detail html template for the project (cafe passport) app, with stickers! -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<br> 
+
+<a href="{% url 'show_cafe' visit.cafe.pk %}" class="btn btn-primary" style="margin-left: 20px;">Back to Cafe</a>
+
+<!-- display visit info -->
+<div id="visit-container" class = "visit-container">
+    <div class="card visit-detail">
+        <h1>Visit to {{ visit.cafe.name }} on {{ visit.date_visited }}</h1>
+
+        <p><strong>Amount spent:</strong> ${{ visit.amount_spent }}</p>
+        <p><strong>Rating:</strong> ⭐ {{ visit.user_rating }}</p>
+
+        <!-- if there are notes, show them -->
+        {% if visit.notes %}
+            <p><strong>Notes:</strong> {{ visit.notes }}</p>
+        {% endif %}
+
+        <h3>Photos</h3>
+        <div class="visit-photos">
+            <!-- if there are photos, show them otherwise display text -->
+            {% for photo in visit.visitphoto_set.all %}
+                <img src="{{ photo.image.url }}" alt="{{ photo.caption }}" class="cafe-detail-img">
+            {% empty %}
+                <p>No photos for this visit.</p>
+            {% endfor %}
+        </div>
+
+        <h3>Favorite Items</h3>
+        <div class="favorite-items">
+            <!-- loop through each favorite item and add a little card -->
+            {% for item in visit.favoriteitem_set.all %}
+                <a href="{% url 'favorite_item_detail' item.pk %}" class="item-card-link">
+                    <div class="item-card">
+                        <h4>{{ item.name }}</h4>
+                        <p>Rating: ⭐ {{ item.rating }}</p>
+
+                        <!-- if there's an image, display it -->
+                        {% with first_photo=item.itemphoto_set.all|first %}
+                            {% if first_photo %}
+                                <img src="{{ first_photo.image.url }}" alt="{{ first_photo.caption }}">
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                
+                </a>
+            {% empty %}
+                <p>No favorite items for this visit.</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- sticker information! -->
+    {% for sticker in visit.stickers.all %}
+        {% if sticker.image %}
+            <div class="sticker-wrapper placed-sticker"
+                data-id="{{ sticker.id }}"
+                data-rotation="{{ sticker.rotation }}"
+                data-scale="{{ sticker.scale }}"
+                style="
+                    position: absolute;
+                    left: {{ sticker.x_position }}%;
+                    top: {{ sticker.y_position }}%;
+                    width: 50px; 
+                    height: 50px;
+                    transform: rotate({{ sticker.rotation }}deg) scale(1); 
+                ">
+
+                <img src="{{ sticker.image.url }}" 
+                    class="sticker-graphic" 
+                    style="width: 100%; height: 100%; pointer-events: none;">
+
+                <div class="resize-handle top-left"></div>
+                <div class="resize-handle top-right"></div>
+                <div class="resize-handle bottom-left"></div>
+                <div class="resize-handle bottom-right"></div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <!-- allow visit update and delete -->
+    <div class="visit-actions" style="margin-top: 20px;">
+        <a href="{% url 'update_visit' visit.pk %}" class="btn btn-primary">Update Visit</a>
+        <a href="{% url 'delete_visit' visit.pk %}" class="btn btn-primary">Delete Visit</a>
+    </div>
+</div>
+
+
+<!-- sticker adding pannel -->
+<h3>Add Stickers</h3>
+<div id="sticker-options">
+    {% for sticker_type in sticker_types %}
+        <img src="{{ sticker_type.image.url }}" 
+             class="sticker-option" 
+             data-type="{{ sticker_type.name }}" style="width:50px; height:50px; cursor:pointer; margin:5px;">
+    {% endfor %}
+</div>
+
+
+<!-- script! -->
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script>
+// sticker manager class 
+class StickerManager {
+
+    // initialize the container for the stickers, enable the tokens, initialize the listerners 
+    constructor(containerId, csrfToken, visitId) {
+        // fetches sticker "canvas"
+        this.visitContainer = document.getElementById(containerId);
+        // gets token
+        this.csrfToken = csrfToken;
+        // gets visit id 
+        this.visitId = visitId;
+        
+        this.baseStickerSize = 50;
+        
+        // intitialize the listeners 
+        this.initDraggableStickers(); 
+        this.initRotationEvents(); 
+        this.initSelectionEvents();
+        this.initDeleteSticker(); // initialize delete listener
+        this.makeExistingStickersInteractive(); 
+    }
+    
+    // make existing stickers interactive and allow transformations of scale, rotation, and position 
+    makeExistingStickersInteractive() {
+        // idenitfy existing listeners 
+        document.querySelectorAll(`#${this.visitContainer.id} .placed-sticker`).forEach(wrapper => {
+            // retrieve saved data
+            
+            const rotation = wrapper.dataset.rotation || 0;
+            const scale = parseFloat(wrapper.dataset.scale) || 1;
+            
+            // apply saved size/rotation
+            wrapper.style.width = (this.baseStickerSize * scale) + 'px';
+            wrapper.style.height = (this.baseStickerSize * scale) + 'px';
+
+            wrapper.style.transform = `rotate(${rotation}deg) scale(1)`; 
+        });
+    }
+
+    // drag to create logic for pallette stickers
+    initDraggableStickers() {
+        // targets source stickers in pallette
+        interact('.sticker-option').draggable({
+            // add listeners to allow user to drag stickers on to visit page
+            listeners: {
+                // init tempoary displacement tracking
+                start: event => {
+                    // updates position as drags
+                    event.target.dataset.x = 0;
+                    event.target.dataset.y = 0;
+                },
+                
+                move: event => {
+                    // calculate new cumulative position
+                    let x = (parseFloat(event.target.dataset.x) || 0) + event.dx;
+                    let y = (parseFloat(event.target.dataset.y) || 0) + event.dy;
+
+                    // apply movements with css
+                    event.target.style.transform = `translate(${x}px, ${y}px)`;
+                    event.target.dataset.x = x;
+                    event.target.dataset.y = y;
+                },
+                // executes on mouse release, reset visual position.state of palette icon
+                end: event => {
+                    event.target.style.transform = '';
+                    event.target.dataset.x = 0;
+                    event.target.dataset.y = 0;
+                }
+            }
+        });
+
+        // more specifications for the drop zone + initializing sticker attributes (like rotate icons)
+        // turns main container into drop zone
+        interact(this.visitContainer).dropzone({
+            // only accept sticker option elements 
+            accept: '.sticker-option',
+            // gotta overlap drop zone by at least 75%
+            overlap: 0.75,
+
+            // on dropping a sticker...
+            ondrop: event => {
+                // get sticker info
+                const stickerType = event.relatedTarget.dataset.type; 
+                const stickerUrl = event.relatedTarget.src;
+                
+                //gets dimensions/proportions
+                const rect = this.visitContainer.getBoundingClientRect();
+                const xClient = event.dragEvent.clientX;
+                const yClient = event.dragEvent.clientY;
+                
+                // convert to percentages
+                let xPercent = ((xClient - rect.left) / rect.width) * 100;
+                let yPercent = ((yClient - rect.top) / rect.height) * 100;
+                
+                // apply center offset correction
+                const xOffsetPercent = (this.baseStickerSize / 2) / rect.width * 100;
+                const yOffsetPercent = (this.baseStickerSize / 2) / rect.height * 100;
+                
+                xPercent -= xOffsetPercent;
+                yPercent -= yOffsetPercent;
+
+                // build and insert the elemetns
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sticker-wrapper placed-sticker';
+                wrapper.style.position = 'absolute';
+                wrapper.style.left = xPercent + '%';
+                wrapper.style.top = yPercent + '%';
+                
+                wrapper.style.width = this.baseStickerSize + 'px'; 
+                wrapper.style.height = this.baseStickerSize + 'px'; 
+                wrapper.style.cursor = 'grab';
+                wrapper.style.transform = `rotate(0deg) scale(1)`; 
+
+                // add handles and image
+                const img = document.createElement('img');
+                img.src = stickerUrl;
+                img.className = 'sticker-graphic';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                // makes sure mouse clicks go through and hit underlying sticker wrapper 
+                img.style.pointerEvents = 'none';
+
+                // html wrapper
+                wrapper.innerHTML = `<div class="resize-handle top-left"></div>
+                                     <div class="resize-handle top-right"></div>
+                                     <div class="resize-handle bottom-left"></div>
+                                     <div class="resize-handle bottom-right"></div>`;
+                wrapper.prepend(img);
+
+                // assigns attributes to new stickers HTML
+                wrapper.dataset.type = stickerType;
+                wrapper.dataset.rotation = 0;
+                wrapper.dataset.scale = 1;
+
+                // add sticker wrapper to page
+                this.visitContainer.appendChild(wrapper);
+                
+                // deselect all the other stickers, reselect old 
+                this.deselectAllStickers(); 
+                this.selectSticker(wrapper);
+                
+                //save it to backend with AJAX
+                this.saveStickerToBackend(wrapper, xPercent, yPercent); 
+            }
+        });
+    }
+    
+    // sticker selction logic 
+    initSelectionEvents() {
+        // listen for mousedown
+        this.visitContainer.addEventListener('mousedown', (e) => {
+            // identify click target
+            const wrapper = e.target.closest('.placed-sticker');
+            
+            // handle sticker click (select)
+            if (wrapper) {
+                if (!wrapper.classList.contains('active')) {
+                    this.deselectAllStickers();
+                    this.selectSticker(wrapper); 
+                }
+
+            // handle canvas click (deselect)
+            } else if (e.target.id === this.visitContainer.id) {
+                this.deselectAllStickers();
+            }
+        });
+    }
+
+    // deselect the stickers logic 
+    deselectAllStickers() {
+        document.querySelectorAll(`#${this.visitContainer.id} .placed-sticker`).forEach(wrapper => {
+            wrapper.classList.remove('active');
+            interact(wrapper).unset(); 
+        });
+    }
+
+    // select them when you click them
+    selectSticker(wrapper) {
+        wrapper.classList.add('active');
+        this.enableStickerInteractions(wrapper);
+    }
+
+    // interaction mamangment (move, resize, rotate)
+
+    enableStickerInteractions(wrapper) {
+        // dragging/moving
+        interact(wrapper)
+
+        .draggable({
+            enabled: true,
+            // sticker cannot be dragged outside of the boundarties of parent elemetn
+            modifiers: [interact.modifiers.restrictRect({ restriction: 'parent' })],
+            listeners: {
+                // real time positioning
+                move: event => {
+                    // current dimesnions/position of parent container
+                    const rect = this.visitContainer.getBoundingClientRect();
+                
+                    let currentLeft = parseFloat(event.target.style.left) || 0;
+                    let currentTop = parseFloat(event.target.style.top) || 0;
+
+                    // calculate to perchange chnage
+                    let xPercentChange = (event.dx / rect.width) * 100;
+                    let yPercentChange = (event.dy / rect.height) * 100;
+                    
+                    // add it to current percentage position
+                    currentLeft += xPercentChange;
+                    currentTop += yPercentChange;
+
+                    // apple new position
+                    event.target.style.left = currentLeft + '%';
+                    event.target.style.top = currentTop + '%';
+
+                    event.target.style.transform = `rotate(${event.target.dataset.rotation}deg) scale(1)`;
+                },
+                // on unclick, update the position
+                end: event => { 
+                    this.updateStickerPosition(event.target); 
+                }
+            }
+        })
+
+        // resizing
+        .resizable({
+            enabled: true,
+            // define which elements should trigger resize actions
+            edges: { 
+                left: '.resize-handle.top-left, .resize-handle.bottom-left', 
+                right: '.resize-handle.bottom-right', 
+                bottom: '.resize-handle.bottom-right, .resize-handle.bottom-left', 
+                top: '.resize-handle.top-left'
+            },
+            
+            modifiers: [
+                // maintain original proportions
+                interact.modifiers.aspectRatio({ ratio: 'preserve' }),
+                // precent from making it too small
+                interact.modifiers.restrictSize({ min: { width: 20, height: 20 } })
+            ],
+
+            listeners: {
+                // while moving
+                move: event => {
+                    // get old
+                    let target = event.target;
+                    const rect = this.visitContainer.getBoundingClientRect();
+
+                    target.style.width = event.rect.width + 'px';
+                    target.style.height = event.rect.height + 'px';
+
+                    // make percent
+                    let xPercentShift = (event.deltaRect.left / rect.width) * 100;
+                    let yPercentShift = (event.deltaRect.top / rect.height) * 100;
+
+                    let currentLeft = parseFloat(target.style.left) || 0;
+                    let currentTop = parseFloat(target.style.top) || 0;
+                    
+                    // apply new width and height
+                    target.style.left = (currentLeft + xPercentShift) + '%';
+                    target.style.top = (currentTop + yPercentShift) + '%';
+
+                    target.style.transform = `rotate(${target.dataset.rotation}deg) scale(1)`;
+                },
+                // update the position
+                end: event => {
+                    // new scale factor 
+                    const newScale = event.rect.width / this.baseStickerSize;
+                    event.target.dataset.scale = newScale;
+
+                    this.updateStickerPosition(event.target);
+                }
+            }
+        });
+    }
+
+    // rotation events
+    initRotationEvents() {
+        let rotationTarget = null;
+        
+        // if mouse clicked, show the associated intraction options and allow rotation
+        document.addEventListener('mousedown', (e) => {
+            // handle indeification (check if dedicated roation handle)
+            const handle = e.target.closest('.resize-handle.top-right');
+            // if it is, disabble dragging and resizing
+            if (handle) {
+                rotationTarget = handle.closest('.placed-sticker');
+                
+                if (rotationTarget && rotationTarget.classList.contains('active') && handle.classList.contains('top-right')) {
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    
+                    // disable dragging while rotating
+                    interact(rotationTarget).draggable(false); 
+                    
+                } else {
+                    rotationTarget = null; 
+                }
+            }
+        });
+
+        // allow dragging to move the sticker 
+        document.addEventListener('mousemove', (e) => {
+            // if there's a rotation target
+            if (rotationTarget) {
+                // find center
+                const rect = rotationTarget.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                // vector calculation
+                const dx = e.clientX - centerX;
+                const dy = e.clientY - centerY;
+                
+                // get angle 
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90; 
+                
+                // apply rotations
+                rotationTarget.dataset.rotation = angle;
+                
+                rotationTarget.style.transform = `rotate(${angle}deg) scale(1)`;
+            }
+        });
+
+        // after it ends, reenabble dragging 
+        document.addEventListener('mouseup', () => {
+            if (rotationTarget) {
+                // re-enable dragging after rotation
+                interact(rotationTarget).draggable(true); 
+                
+                // update the position 
+                this.updateStickerPosition(rotationTarget); 
+                rotationTarget = null;
+            }
+        });
+    }
+
+    // deletion logic
+    initDeleteSticker() {
+        // on key down
+        document.addEventListener('keydown', (e) => {
+            // check for Backspace or Delete, delete the sticker
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                // identify target sticker
+                const activeSticker = this.visitContainer.querySelector('.placed-sticker.active');
+
+                // if an active sticker found
+                if (activeSticker) {
+                    // prevent default browser action (back navigating)
+                    e.preventDefault(); 
+                    
+                    const stickerId = activeSticker.dataset.id;
+                    
+                    // persistent deltion
+                    if (stickerId) {
+                        this.deleteStickerFromBackend(stickerId, activeSticker);
+                    } else {
+                        // if it's a new sticker not yet saved, just remove it from the DOM
+                        activeSticker.remove();
+                    }
+                }
+            }
+        });
+    }
+
+    // delete that bad boy from the database
+    deleteStickerFromBackend(stickerId, wrapperElement) {
+        // intitialze AJAX request
+        fetch("{% url 'delete_sticker' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.csrfToken
+            },
+            body: JSON.stringify({
+                sticker_id: stickerId
+            })
+        })
+        // process response 
+        .then(res => {
+            if (res.ok) {
+                // remove the element from the DOM only after successful deletion
+                wrapperElement.remove();
+            } else {
+                console.error('Failed to delete sticker on backend.');
+                alert('Could not delete sticker. Please try again.');
+            }
+        })
+        .catch(err => console.error('Error deleting sticker:', err));
+    }
+    
+    // backend persistence for existing stickers (save the asscoaited data)
+    saveStickerToBackend(wrapper, xPercent, yPercent) {
+        // intitialize AJAX request 
+        fetch("{% url 'place_sticker' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.csrfToken
+            },
+            body: JSON.stringify({
+                visit_id: this.visitId,
+                sticker_type: wrapper.dataset.type,
+                x: xPercent, 
+                y: yPercent, 
+                rotation: 0,
+                scale: 1
+            })
+        })
+        // handle response 
+        .then(res => res.json())
+        .then(data => {
+            // if it created a sticker, save id to wrapper (needed for later update or delete)
+            if (data.status === 'success' && data.id) {
+                wrapper.dataset.id = data.id; 
+            } else {
+                console.error('Backend failed to place sticker:', data.message || "Unknown error");
+                wrapper.remove(); 
+                this.deselectAllStickers();
+            }
+        })
+        .catch(err => {
+            console.error('Error saving sticker:', err);
+            wrapper.remove(); 
+            this.deselectAllStickers();
+        });
+    }
+
+    // update the position if moved
+    updateStickerPosition(wrapper) {
+        // get final sticker position, convert them into percentages 
+        const finalXPercent = parseFloat(wrapper.style.left);
+        const finalYPercent = parseFloat(wrapper.style.top);
+
+        // confrim rotation
+        wrapper.style.transform = `rotate(${wrapper.dataset.rotation}deg) scale(1)`;
+        
+        // send AJAX update
+        fetch("{% url 'update_sticker' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.csrfToken
+            },
+            body: JSON.stringify({
+                sticker_id: wrapper.dataset.id,
+                x: finalXPercent, 
+                y: finalYPercent, 
+                rotation: wrapper.dataset.rotation,
+                scale: wrapper.dataset.scale 
+            })
+        })
+        .catch(err => console.error('Error updating sticker position:', err));
+    }
+}
+
+// wait for html load
+document.addEventListener('DOMContentLoaded', () => {
+    // get token
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value; 
+    // innitialize sticker manager 
+    new StickerManager('visit-container', csrfToken, {{ visit.id }});
+});
+</script>
+
+{% endblock %}

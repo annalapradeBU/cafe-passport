@@ -1,0 +1,121 @@
+<!-- File: cafe_search.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/03/2025 -->
+<!-- Description: the html template to show the cafe search form for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+{% block content %}
+
+<div class="container cafe-container">
+
+    <h2>☕ Cafe Search</h2>
+
+    <div class="card cafe-search-card">
+
+        <form method="GET" action="{% url 'cafe_search' %}">
+
+            <!-- tag filters -->
+            <div class="wishlist-card cafe-filter-card">
+                <p class="cafe-filter-title">Filter by Tags:</p>
+
+                <div class="cafe-tags-container">
+                    <!-- iterate through tags and create each as a "checkbox" input-->
+                    {% for tag in all_tags %}
+                        <label for="tag-{{ tag.pk }}" class="tag cafe-tag">
+                            <input 
+                                type="checkbox"
+                                name="tags"
+                                value="{{ tag.pk }}"
+                                id="tag-{{ tag.pk }}"
+                                {% if tag.pk in selected_tags %}checked{% endif %}
+                            >
+                            <span>{{ tag.name }}</span>
+                        </label>
+                    
+                    {% empty %}
+                        <p>No tags available.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <br>
+
+            <!-- search bar -->
+            <div class="cafe-search-row">
+                <input 
+                    type="text"
+                    placeholder="Search by name or address..."
+                    name="q"
+                    class="form-control cafe-search-input"
+                    value="{{ search_query }}"
+                >
+                <button class="btn" type="submit">🔍 Search</button>
+            </div>
+
+            
+        </form>
+    </div>
+
+    <!-- if there's a search query, show it and/or associated tags -->
+    {% if search_query or selected_tags %}
+        <p class="cafe-results-info">
+            Showing results for:
+            <strong>
+                <!-- show search query if it exists-->
+                {% if search_query %}"{{ search_query }}"{% endif %}
+                <!-- show tags if they exist in query -->
+                {% if selected_tag_objs %}
+                    {% if search_query %} & {% endif %}
+                    Tags: 
+                    <!-- go through tags and associated tag namees used in the search -->
+                    {% for tag in selected_tag_objs %}
+                        {{ tag.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </strong>
+        </p>
+    {% endif %}
+
+    <!-- results grid -->
+    <div class="wishlist-grid cafe-results-grid">
+        <!-- show cafes if there are relevant results -->
+        {% if cafes %}
+            <!-- iterate through cafe results -->
+            {% for cafe in cafes %}
+                <a href="{% url 'show_cafe' pk=cafe.pk %}" class="wishlist-card cafe-card">
+
+                    <div class="wishlist-info">
+
+                        <h3 class="wishlist-title cafe-card-title">{{ cafe.name }}</h3>
+
+                        <img src="{{ cafe.image|default:'https://img.freepik.com/premium-vector/cute-doodle-cup-coffee-saucer-isolated-white-background_361363-219.jpg' }}" 
+                            alt="{{ cafe.name }}" 
+                            class="wishlist-img">
+                        
+
+                        <p class="wishlist-address cafe-card-address">
+                            📍 {{ cafe.address|default:"Unknown Address" }}
+                        </p>
+
+                        <div class="tags-container cafe-card-tags">
+                            <!-- show tags associated with the cafe -->
+                            {% for tag in cafe.tags.all %}
+                                <span class="tag">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </a>
+            {% endfor %}
+        <!-- show no results if no results -->
+        {% else %}
+            <div class="card cafe-no-results">
+                No cafes found matching your criteria.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+
+{% endblock content %}

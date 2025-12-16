@@ -1,0 +1,31 @@
+<!-- File: home.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 09/26/2025 -->
+<!-- Description: the home page html template for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<!-- basic login and stuff -->
+<div class="card cafe-detail">
+    <h1>Welcome to Cafe Passport ☕</h1>
+
+    <div class="center-buttons">
+        <!-- if user logged in, just show that, cafe profile button, and logout-->
+        {% if user.is_authenticated %}
+            <p>Hello, {{ user.username }}!</p>
+            <a href="{% url 'show_cafe_profile' user.cafe_profile.id %}" class="btn btn-primary">Your Profile</a>
+            <a href="{% url 'logout' %}" class="btn btn-primary">Logout</a>
+        
+        <!-- otherwise, show login/signup info-->
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+            <a href="{% url 'signup' %}" class="btn btn-primary">Sign Up</a>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
+

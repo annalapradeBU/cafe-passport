@@ -1,0 +1,110 @@
+<!-- File: base.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 09/26/2025 -->
+<!-- Description: the base html template for the project (cafe passport) app -->
+
+<!-- allows to load in static data -->
+{% load static %}
+
+{% block extra_head %}
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script> 
+        
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
+
+<html >
+    <head>
+        <!-- specify character encoding (makes sure I can use certain emojis and such accross borwers )-->
+        <meta charset="UTF-8">
+
+        <!-- responsive tweaks -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- browser tab title -->
+        <title>{% block title %}Cafe Passport{% endblock %}</title>
+
+        <!-- load in stylesheet -->
+        <link rel="stylesheet" href="{% static 'cafe_styles.css' %}">
+
+        <!-- loading in google fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Delius+Swash+Caps&family=Jersey+10&family=Permanent+Marker&family=Spicy+Rice&display=swap" rel="stylesheet">
+    </head>
+
+    <body>
+        <!-- header with navbar/logo-->
+        <header>
+
+            <h1><a href="{% url 'all_cafes' %}">Cafe Passport</a></h1>
+
+            <!-- navbar-->
+            <nav class="navbar">
+                <div class="nav-left">
+                    <a href="{% url 'all_cafes' %}" class="nav-logo">Cutie Pie Cafés ☕🍰</a>
+                </div>
+            
+                <div class="nav-right">
+                    <a href="{% url 'all_cafes' %}" class="nav-link">All Cafes</a>
+                    <!-- show profile only if a user is logged in -->
+                    {% if user.is_authenticated %}
+                        {% if user.cafe_profile %}
+                            <a href="{% url 'show_cafe_profile' user.cafe_profile.pk %}" class="nav-link">My Passport 💖</a>
+                            <a href="{% url 'wishlist' %}" class="nav-link">My Wishlist 🌷</a>
+                            <a href="{% url 'cafe_stats' %}" class="nav-link">Cafe Stats 🌿</a>
+                            <a href="{% url 'cafe_search' %}" class="nav-link">Cafe Search 🌿</a>
+                        {% else %}
+                            <a href="{% url 'home' %}" class="nav-link">Home 💖</a>
+                        {% endif %}
+                        <!-- allow logout if user is logged in -->
+                        <form method="post" action="{% url 'logout' %}" class="logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="logout-link">Sign Out 🚪</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="nav-link">Log In ✨</a>
+                        <a href="{% url 'signup' %}" class="nav-link">Create Account 🌸</a>
+                    {% endif %}
+                    
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            {% block content %}
+            <!-- page-specific content will go here -->
+            {% endblock %}
+        </main>
+
+        <footer>
+            
+        </footer>
+
+        <!-- script to facciliate theme changing -->
+        <script>
+            // waits for HTML doc to load in
+            document.addEventListener('DOMContentLoaded', () => {
+                const body = document.body;
+        
+                // get the theme directly from the context variable passed by Django.
+                // if user is logged out or theme_processor fails, it defaults to 'default'.
+                const userTheme = "{{ user_theme|default:'default' }}";
+        
+                // apply the theme loaded from the server/database.
+                setTheme(userTheme);
+        
+                // applies the chosen theme class to the body.
+                function setTheme(themeName) {
+                    const themeClasses = ['theme-default', 'theme-dark', 'theme-forest', 'theme-ocean', 'theme-lavender', 'theme-roastery', 'theme-gothic'];
+                    
+                    // removes all existing theme classes from <body>
+                    themeClasses.forEach(cls => body.classList.remove(cls));
+                    // add the new theme
+                    body.classList.add(`theme-${themeName}`);
+                }
+        
+                window.setTheme = setTheme;
+            });
+        </script>
+    </body>
+</html>

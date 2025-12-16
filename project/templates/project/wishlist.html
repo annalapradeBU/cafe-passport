@@ -1,0 +1,55 @@
+<!-- File: wishlist.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/03/2025 -->
+<!-- Description: the html template to show all of a user's wishlist cafes for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<h2>Wishlist Cafes</h2>
+
+<div class="card">
+
+    <div class="add-button-container">
+        <a href="{% url 'add_to_wishlist' %}" class="btn btn-primary">
+            + Add New Cafe to Wishlist
+        </a>
+    </div>
+
+<!-- wishlist items display -->
+<div class="wishlist-grid">
+    <!-- iterate through wishlist items, create cards -->
+    {% for item in wishes %}
+        
+        {% with cafe=item.cafe %} 
+        
+        <a href="{% url 'show_cafe' cafe.pk %}" class="wishlist-card 
+            {% if item.has_visited %}visited{% endif %}"> 
+            <img src="{{ cafe.image|default:'https://img.freepik.com/premium-vector/cute-doodle-cup-coffee-saucer-isolated-white-background_361363-219.jpg' }}" 
+                            alt="{{ cafe.name }}" 
+                            class="wishlist-img">
+
+            <h3 class="wishlist-title">{{ cafe.name }}</h3>
+            <p class="wishlist-address">{{ cafe.address }}</p>
+
+            <div class="wishlist-info">
+                <!-- if it's been visited, show the little visited button, show unvisted otherwise -->
+                    {% if item.has_visited %} 
+                    <span class="wishlist-status visited">✓ Visited</span>
+
+                    {% else %}
+                    <span class="wishlist-status unvisited">⏳ Not yet</span>
+                        
+                    {% endif %}  
+            </div>
+        </a>
+        
+        {% endwith %}
+    
+    {% empty %}
+        <p>No cafes found.</p>
+    {% endfor %}
+</div>
+</div>
+{% endblock %}

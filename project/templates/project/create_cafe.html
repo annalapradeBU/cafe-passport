@@ -1,0 +1,83 @@
+<!-- File: create_cafe.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 09/26/2025 -->
+<!-- Description: the html template for the cafe creation form for the the project (cafe passport) app,
+    doubles as update form. -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+<!-- tab title! -->
+{% block title %}Add Cafe{% endblock %}
+
+{% block content %}
+
+<h2>
+    {% if cafe %}
+        Edit {{ cafe.name }}
+    {% else %}
+        Add New Cafe
+    {% endif %}
+</h2>
+
+<!-- warning box to mention that cafes are global -->
+<div class="warning-box" >
+    <h3>🌐 Global Cafe Database Warning 🌐</h3>
+    <p>
+        <strong>Attention:</strong> All cafes created or edited here are added to the <strong>global database</strong>. 
+        <br>
+        This means <strong>every user</strong> of Cafe Passport will be able to see this cafe, its address, and its public details. Please ensure the information is accurate and appropriate.
+    </p>
+</div>
+
+<!-- form container -->
+<div class="auth-container">
+    <form method="POST" class="auth-form">
+        {% csrf_token %}
+        
+        <!-- look over ever feils, skip "add_to_wishlist" in favor of custome toggle -->
+        {% for field in form %}
+            <!-- if it's not add to wishlist-->
+            {% if field.name != "add_to_wishlist" %}
+                <!-- if it's a tag, render it differently -->
+                {% if field.name == "tags" %}
+                    <p>{{ field.label_tag }}</p>
+                    <div class="cafe-tags-container">
+                        <!-- loop through possible tags and show them-->
+                        {% for choice in field %}
+                            <label class="cafe-tag">
+                                {{ choice.tag }} 
+                                {{ choice.choice_label }} 
+                            </label>
+                        {% endfor %}
+                    </div>
+                
+                {% else %}
+                    <p>{{ field.label_tag }} {{ field }}</p>
+                {% endif %}
+            
+            {% endif %}
+        {% endfor %}
+
+        <!-- "add_to_wishlist" toggle-->
+        <div class="toggle-wrapper">
+            <label class="toggle">
+                {{ form.add_to_wishlist }}
+                <span class="slider"></span>
+                <span class="toggle-label">Add to my wishlist</span>
+            </label>
+        </div>
+
+        <!-- submission button-->
+        <button type="submit" class="btn">
+            <!-- if the cafe already exists, user is updating it-->
+            {% if cafe %}
+                Update Cafe
+            
+            <!-- otherwise, they're creating it-->
+            {% else %}
+                Create Cafe
+            {% endif %}
+        </button>
+    </form>
+</div>
+{% endblock %}

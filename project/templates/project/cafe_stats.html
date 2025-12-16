@@ -1,0 +1,113 @@
+<!-- File: cafe_stats.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/03/2025 -->
+<!-- Description: the html template to show the cafe stats for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+<div class="card">
+
+    <h1>📊 Cafe Passport Statistics</h1>
+    <p class="stats-subtitle">A summary of your cafe adventures so far!</p>
+
+    <div class="stats-grid">
+        <!-- wishlist progress -->
+        <div class="stat-card">
+            <h5 class="stat-title">Wishlist Progress</h5>
+
+            <hr>
+
+            <div class="stat-row">
+                <span class="stat-label">Unvisited:</span>
+                <span class="stat-pill accent">{{ unvisited_wishlist_count }}</span>
+            </div>
+
+            <div class="stat-row">
+                    <span class="wishlist-label">Visited from Wishlist:</span>
+                    <span class="wishlist-count">{{ visited_wishlist_count }} / {{ total_wishlist_cafes }}</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">Visited Percentage:</span>
+                <span class="stat-pill accent">{{ percent_visited_wishlist }}%</span>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ percent_visited_wishlist }}%;"></div>
+            </div>
+
+        </div>
+
+        <!-- visits & spending -->
+        <div class="stat-card">
+            <h5 class="stat-title">Visits & Spending</h5>
+            <hr>
+            <div class="stat-row">
+                <span class="stat-label">Total Visits Logged:</span>
+                <span class="stat-pill accent">{{ total_visits }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg. Money Spent:</span>
+                <span class="stat-pill accent">${{ avg_money_spent }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg. Visit Rating:</span>
+                <span class="stat-pill accent">⭐ {{ avg_visit_rating }}</span>
+            </div>
+            
+        </div>
+
+        <!-- item favorites -->
+        <div class="stat-card">
+            <h5 class="stat-title">Item Favorites</h5>
+            <hr>
+            <div class="stat-row">
+                <span class="stat-label">Total Favorite Items:</span>
+                <span class="stat-pill accent">{{ total_favorite_items }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg. Item Cost:</span>
+                <span class="stat-pill accent">${{ avg_item_cost }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg. Item Rating:</span>
+                <span class="stat-pill accent">⭐ {{ avg_item_rating }}</span>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <!-- tag stats-->
+    <div class="stats-grid chart-grid">
+
+        <!-- tag breakdown chart -->
+        <div class="stat-card chart-card">
+            <h2>🥧 Visited Cafe Tags Breakdown</h2>
+            <div id="tagPieChart">
+                {{ tag_chart_html|safe }}
+            </div>
+        </div>
+    
+        <!-- top visited tags -->
+        <div class="stat-card chart-card">
+            <h2>🏷️ Top Visited Cafe Tags</h2>
+            <!-- if there's tags in the top tags list, display them-->
+            {% if most_common_tags %}
+                <!-- loop through the tags-->
+                <ol class="tag-list">
+                    {% for tag in most_common_tags %}
+                        <li class="tag-item"><strong>{{ tag.tags__name }}</strong> ({{ tag.count }} Cafes)</li>
+                    {% endfor %}
+                </ol>
+            {% else %}
+                <p class="muted-text">Log a visit to a tagged cafe to see your common interests!</p>
+            {% endif %}
+        </div>
+    
+    </div>
+</div>
+
+
+{% endblock content %}

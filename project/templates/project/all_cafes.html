@@ -1,0 +1,39 @@
+<!-- File: all_cafes.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the html template to show all cafes for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<h2>All Cafes</h2>
+
+
+<div class="card">
+    <a href="{% url 'create_cafe' %}" class="btn btn-primary">Add New Cafe</a>
+
+    <div class="wishlist-grid">
+        <!-- loop through all the cafes -->
+        {% for cafe in cafes %}
+            <!-- display the name, photo (if present) and address in a clickable card -->
+            <a href="{% url 'show_cafe' cafe.pk %}" class="wishlist-card">
+
+                <!-- show image if present, use default otherwise -->
+                <img src="{{ cafe.image|default:'https://img.freepik.com/premium-vector/cute-doodle-cup-coffee-saucer-isolated-white-background_361363-219.jpg' }}" 
+                alt="{{ cafe.name }}" 
+                class="wishlist-img">
+                
+                <div class="wishlist-info">
+                    <h3 class="wishlist-title">{{ cafe.name }}</h3>
+                    <p class="wishlist-address">{{ cafe.address }}</p>
+                </div>
+            </a>
+        <!-- if it's empty, say no cafes found -->
+            {% empty %}
+                <p>No cafes found.</p>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!-- File: favorite_item.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the favorite item html template for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<br>
+
+<a href="{% url 'visit_detail' item.visit.pk %}" class="btn btn-primary" style="margin-left: 20px;">Back to Visit</a>
+
+<div class="card item-detail">
+    <h1>{{ item.name }}</h1>
+    <p>Price: ${{ item.price }}</p>
+    <p>Rating: ⭐ {{ item.rating }}</p>
+    <!-- if there's a description, show it! -->
+    {% if item.description %}
+        <p>{{ item.description }}</p>
+    {% endif %}
+
+    <h3>Photos</h3>
+    <div class="item-photos">
+        <!-- if there's an associated photo, show it! -->
+        {% for photo in item.itemphoto_set.all %}
+            <img src="{{ photo.image.url }}" alt="{{ photo.caption }}" class="cafe-detail-img">
+        {% empty %}
+            <p>No photos available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

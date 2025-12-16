@@ -1,0 +1,33 @@
+<!-- File: login.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/27/2025 -->
+<!-- Description: the favorite item html template for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends 'project/base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <h1>Login to Cafe Passport</h1>
+
+    <!-- form -->
+    <form action="{% url 'login' %}" method="POST" class="form_style">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <!-- if there's a specifies next, use it-->
+        {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+
+        <div class="form-buttons">
+            <button type="submit" class="logout-link">Login</button>
+        </div>
+    </form>
+
+    <!-- link to create account instead -->
+    <div class="create-account-message">
+        Don't have an account? 
+        <a href="{% url 'signup' %}" class="logout-link">Create Profile</a>
+    </div>
+</div>
+{% endblock %}

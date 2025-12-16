@@ -1,0 +1,30 @@
+<!-- File: delete_visit.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the html template for the visit deletion form for the the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<div class="container">
+    <div class="card">
+        <!-- warning message-->
+        <h1>⚠️ Confirm Deletion</h1>
+        <p class="lead">Are you sure you want to delete your visit record for:</p>
+        
+        <h2 class="">{{ visit.cafe.name }} on {{ visit.date_visited|date:"F j, Y" }}?</h2>
+
+        <!-- actual form for deletion -->
+        <form method="post">
+
+            {% csrf_token %}
+            <!-- deletion button-->
+            <button type="submit" class="btn">Yes, Delete this Visit Permanently</button>
+            <!-- go back button-->
+            <a href="{% url 'visit_detail' visit.pk %}" class="btn">No, Go Back</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,25 @@
+<!-- File: signup.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the signup html template for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends 'project/base.html' %}
+
+{% block content %}
+
+<!-- display the form fields in a pretty way -->
+<div class="auth-container">
+    <h1>🌸 Create Your Cafe Passport 🌸</h1>
+    <!-- signup form! -->
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <!-- submit buttons!-->
+        <button type="submit" class="btn">Sign Up ✨</button>
+    </form>
+    <p class="auth-footer">
+        Already have an account? <a href="{% url 'login' %}">Log In 💖</a>
+    </p>
+</div>
+
+{% endblock %}

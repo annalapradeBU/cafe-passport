@@ -1,0 +1,38 @@
+<!-- File: delete.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/08/2025 -->
+<!-- Description: the html template for cafe deletion for the the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+<!-- block title!-->
+{% block title %}Confirm Delete: {{ cafe.name }}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="card" >
+        <!-- warning message-->
+        <h1>⚠️ Confirm Cafe Deletion</h1>
+        <p class="lead">Are you absolutely sure you want to <strong>PERMANENTLY</strong> delete the cafe entry for:</p>
+        
+        <h2 style="color: var(--danger);">{{ cafe.name }}</h2>
+
+        <p>
+            <strong>This is an irreversible action!</strong> Deleting this GLOBAL cafe will also delete ALL associated user data, including:
+        </p>
+        
+        <!-- deletion form-->
+        <form method="post" >
+            {% csrf_token %}
+        
+            <!-- submit button -->
+            <button type="submit" class="btn">Yes, Delete {{ cafe.name }} Permanently</button>
+
+            <!-- go back button-->
+            <a href="{% url 'show_cafe' cafe.pk %}" class="btn">No, Go Back to Cafe Details</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

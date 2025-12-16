@@ -1,0 +1,101 @@
+<!-- File: add_to_wishlist.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 12/03/2025 -->
+<!-- Description: the html template to show the adding cafes to wshlist form for the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+{% extends "project/base.html" %}
+
+<!-- for the select2 stuff -->
+{% load static %} 
+
+{% block content %}
+<h2>Add Cafe to Wishlist</h2>
+
+<!-- adding new wishlist items form -->
+<div class="auth-container">
+
+    <!-- exisitng cafe form -->
+    <form method="POST" class="auth-form" id="existing-cafe-form">
+        {% csrf_token %}
+        <fieldset>
+            <legend>Select or Find a Cafe</legend>
+
+            <p>{{ add_form.cafe_choice.label_tag }}</p>
+            <p>{{ add_form.cafe_choice }}</p>
+            <small>{{ add_form.cafe_choice.help_text|safe }}</small>
+
+            <button type="submit" class="btn" name="select_cafe_submit">
+                Add Selected Cafe to Wishlist
+            </button>
+        </fieldset>
+    </form>
+
+    <hr>
+
+    <!-- creating a new cafe form -->
+    <form method="POST" class="auth-form" id="new-cafe-form">
+        {% csrf_token %}
+        <fieldset>
+            <legend>Create a New Cafe 🌸</legend>
+
+            <!-- display the form fields -->
+            {% for field in new_cafe_form %}
+                <!-- if tags, do the special pill formatting -->
+                {% if field.name != "add_to_wishlist" %}
+                    {% if field.name == "tags" %}
+                        <p>{{ field.label_tag }}</p>
+                        <div class="cafe-tags-container">
+                            <!-- loop through possible tags and show them-->
+                            {% for choice in field %}
+                                <label class="cafe-tag">
+                                    {{ choice.tag }} 
+                                    {{ choice.choice_label }} 
+                                </label>
+                            {% endfor %}
+                        </div>
+                    
+                    <!-- otherwise render in as normal-->
+                    {% else %}
+                        <p>{{ field.label_tag }} {{ field }}</p>
+                    {% endif %}  
+                {% endif %}
+                
+                
+            {% endfor %}
+
+            <br>
+
+            <div class="toggle-wrapper">
+                <label class="toggle">
+                    {{ new_cafe_form.add_to_wishlist }}
+                    <span class="slider"></span>
+                    <span class="toggle-label">Add to my wishlist</span>
+                </label>
+            </div>
+
+            <br>
+
+            <button type="submit" class="btn btn-primary" name="new_cafe_submit">
+                Create Cafe
+            </button>
+        </fieldset>
+    </form>
+
+</div>
+
+<!-- script! using select2 for existing cafe selction -->
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/select2.min.js' %}"></script>
+<script>
+
+// find cafe seleect elements, convert into select2 dropdown
+$(document).ready(function() {
+    $('#id_cafe_choice').select2({
+        placeholder: "Start typing to search existing cafes...",
+        allowClear: true 
+    });
+});
+
+</script>
+
+{% endblock %}

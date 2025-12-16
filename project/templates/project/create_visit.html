@@ -1,0 +1,530 @@
+<!-- File: create_visit.html -->
+<!-- Author: Anna LaPrade (alaprade@bu.edu), 11/26/2025 -->
+<!-- Description: the html template for the visit creation form for the the project (cafe passport) app -->
+
+<!-- extend from the base template -->
+
+{% extends 'project/base.html' %} 
+{% load static %}
+
+<!-- little tab title -->
+{% block title %}Add Visit to {{ cafe.name }}{% endblock %}
+
+
+{% block content %}
+
+
+<div class="visit-form-container">
+    <h2 class="form-header">
+        Log Visit to {{ cafe.name }} ☕
+    </h2>
+    
+    <!-- form container -->
+    <form id="visit-form" class="visit-form-main">
+        {% csrf_token %} 
+        
+        <div id="status-message" class="hidden status-message">
+        </div>
+
+        <!-- basic visit details section -->
+        <div class="form-section-card">
+            <h3 class="section-heading-main">Visit Details</h3>
+            
+            <div class="form-grid-3">
+                
+                <div class="form-group">
+                    <label for="date_visited" class="form-label">Date Visited:</label>
+                    <input type="date" id="date_visited" name="date_visited" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user_rating" class="form-label">Your Rating (1-5):</label>
+                    <input type="number" id="user_rating" name="user_rating" class="form-input" min="1" max="5" placeholder="e.g., 5" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount_spent" class="form-label">Amount Spent ($):</label>
+                    <input type="number" id="amount_spent" name="amount_spent" class="form-input" step="0.01" placeholder="e.g., 25.50" required>
+                </div>
+            </div>
+            
+            <div class="form-group full-row">
+                <label for="notes" class="form-label">Notes/Review:</label>
+                <textarea id="notes" name="notes" rows="4" class="form-input" placeholder="What did you think of the atmosphere, service, or overall experience?"></textarea>
+            </div>
+        </div>
+        
+         <!-- visit photos section -->
+        <div id="visit-photos-section" class="form-section-card collapsible-section collapsed">
+            <h3 class="section-heading-main section-header-trigger">
+                Visit Photos (Max 5) 📸
+                <span class="expand-icon">▼</span>
+            </h3>
+            <div id="visit-photos-content" class="collapsible-content">
+                <div id="visit-photos-container" class="dynamic-group-container">
+                </div>
+                <button type="button" id="add-visit-photo-button" class="btn add-button-small">
+                    + Add Another Photo
+                </button>
+            </div>
+        </div>
+
+        <!-- favoite item section -->
+        <div id="favorite-items-section" class="form-section-card collapsible-section collapsed">
+            <h3 class="section-heading-main section-header-trigger">
+                Favorite Items (Max 3) 🍰
+                <span class="expand-icon">▼</span>
+            </h3>
+            <div id="favorite-items-content" class="collapsible-content">
+                <div id="favorite-items-container" class="dynamic-group-container">
+                </div>
+                
+                <button type="button" id="add-item-button" class="btn add-button-small">
+                    + Add Another Favorite Item
+                </button>
+            </div>
+        </div>
+        
+        <!-- submission button -->
+        <button type="submit" class="btn submit-button" id="log-visit-button">
+            Log Full Visit
+        </button>
+    </form>
+</div>
+
+<!-- template to add extra ItemPhotos-->
+<template id="item-photo-template">
+    <div class="item-photo-group">
+        <div class="item-photo-field">
+            <label class="item-label">Upload Item Photo:</label>
+            <input type="file" class="photo-file-input form-input" accept="image/*">
+        </div>
+        <div class="item-photo-field">
+            <label class="item-label">Caption:</label>
+            <input type="text" placeholder="Photo caption" maxlength="255" class="photo-caption-input form-input">
+        </div>
+        <button type="button" class="remove-dynamic-btn" title="Remove Photo">&times;</button>
+    </div>
+</template>
+
+<!-- template to add extra FavoriteItems-->
+<template id="favorite-item-template">
+    <div class="favorite-item-card wishlist-card">
+        <h4 class="item-group-header">Favorite Item #<span class="item-index-display"></span></h4>
+        <div class="form-grid-3 item-details-grid">
+            <div class="form-group">
+                <label class="form-label">Name:</label>
+                <input type="text" class="item-name-input form-input" placeholder="e.g., Strawberry Crêpe">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Price ($):</label>
+                <input type="number" class="item-price-input form-input" step="0.01" placeholder="e.g., 12.00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rating (1-5):</label>
+                <input type="number" class="item-rating-input form-input" min="1" max="5" placeholder="e.g., 5">
+            </div>
+            <div class="form-group full-row">
+                <label class="form-label">Description:</label>
+                <textarea rows="2" class="item-description-input form-input" placeholder="Tastes like happiness!"></textarea>
+            </div>
+        </div>
+
+        <h5 class="item-photos-subheader">Item Photos (Max 2)</h5>
+        <div class="item-photos-container dynamic-group-sub-container">
+        </div>
+        <div class="item-actions">
+            <button type="button" class="btn add-item-photo-btn">
+                + Add Item Photo
+            </button>
+            <button type="button" class="btn remove-item-btn">
+                Remove Favorite Item
+            </button>
+        </div>
+    </div>
+</template>
+
+<!-- script!-->
+<script>
+    // dynamically generate new visit url
+    const CAFE_PK = {{ cafe.pk }}; 
+    const URL_ENDPOINT = "{% url 'log_cafe_visit' cafe_pk=cafe.pk %}"; 
+    // run script after the template has loaded 
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        
+        
+        
+        // specify maximums for each items type
+        const MAX_VISIT_PHOTOS = 5;
+        const MAX_FAVORITE_ITEMS = 3;
+        const MAX_ITEM_PHOTOS = 2;
+
+        // cient-side state management
+        let visitState = {
+            visitPhotos: [], 
+            favoriteItems: [], 
+        };
+        
+        // fetches/stores the key DOM elements to use later
+        const form = document.getElementById('visit-form');
+        const visitPhotosContainer = document.getElementById('visit-photos-container');
+        const favoriteItemsContainer = document.getElementById('favorite-items-container');
+        const statusMessage = document.getElementById('status-message');
+        
+        // templates
+        const itemTemplate = document.getElementById('favorite-item-template');
+        const itemPhotoTemplate = document.getElementById('item-photo-template');
+
+        // renders the dynamic content (FavoriteItem's and ItemPhoto's) based on visitState.
+        function renderDynamicContent() {
+            // render VisitPhotos
+
+            // clear existing HTML
+            visitPhotosContainer.innerHTML = '';
+
+            // iterates though the visit photos
+            visitState.visitPhotos.forEach((photo, pIdx) => {
+                const el = document.createElement('div');
+                // updated class for styling changes
+                el.className = 'visit-photo-group'; 
+                
+                // gnerate the html for the new VisitPhoto feild when the user adds it in
+                el.innerHTML = `
+                    <div class="photo-index-label">Photo #${pIdx + 1}</div>
+                    <div class="flex-grow">
+                        <label class="item-label">Upload Visit Photo:</label>
+                        <input type="file" class="visit-photo-file-input form-input" accept="image/*">
+                    </div>
+                    <div class="flex-grow">
+                        <label class="item-label">Caption:</label>
+                        <input type="text" placeholder="Photo caption" maxlength="255" class="visit-photo-caption-input form-input" value="${photo.caption}">
+                    </div>
+                    <button type="button" class="btn remove-visit-photo-btn" title="Remove Photo" data-index="${pIdx}">Remove Visit Photo</button>
+                
+                `;
+                
+                // re-assign the File object to the newly created input
+                const fileInput = el.querySelector('.visit-photo-file-input');
+                if (photo.file) {
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(photo.file);
+                    fileInput.files = dataTransfer.files;
+                }
+                
+                // update the visitState when a file is inputted
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        visitState.visitPhotos[pIdx].file = e.target.files[0];
+                    }
+                });
+                
+                // captures the text and updates the visitState
+                el.querySelector('.visit-photo-caption-input').addEventListener('input', (e) => {
+                    visitState.visitPhotos[pIdx].caption = e.target.value;
+                });
+                
+                // attach the listener directly to the remove button
+                const removeBtn = el.querySelector('.remove-visit-photo-btn');
+                removeBtn.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    removeVisitPhoto(index);
+                });
+
+                // add the new item to the HMTL page
+                visitPhotosContainer.appendChild(el);
+            });
+
+            // render the FavoriteItems
+
+            // clear exisitng HTML
+            favoriteItemsContainer.innerHTML = '';
+
+            // iterate over favorite items
+            visitState.favoriteItems.forEach((item, itemIdx) => {
+                // clones HTML for a favorite item
+                const itemEl = itemTemplate.content.cloneNode(true);
+                
+                // queries cloned template to reference main input feilds 
+                itemEl.querySelector('.item-index-display').textContent = itemIdx + 1;
+                const nameInput = itemEl.querySelector('.item-name-input');
+                const priceInput = itemEl.querySelector('.item-price-input');
+                const ratingInput = itemEl.querySelector('.item-rating-input');
+                const descInput = itemEl.querySelector('.item-description-input');
+
+                // set initial values
+                nameInput.value = item.name;
+                priceInput.value = item.price !== null ? item.price : '';
+                ratingInput.value = item.rating !== null ? item.rating : '';
+                descInput.value = item.description;
+
+                // add event listeners for state update
+                nameInput.addEventListener('input', (e) => item.name = e.target.value);
+                // listener + handle null values for price
+                priceInput.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    item.price = val === '' ? null : (isNaN(parseFloat(val)) ? null : parseFloat(val));
+                });
+
+                // listener + handle null values for rating
+                ratingInput.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    item.rating = val === '' ? null : (isNaN(parseInt(val)) ? null : parseInt(val));
+                });
+                descInput.addEventListener('input', (e) => item.description = e.target.value);
+
+                // setup ItemPhotos
+                const itemPhotosContainer = itemEl.querySelector('.item-photos-container');
+
+                // iterate over each photo object
+                item.photos.forEach((photo, photoIdx) => {
+                    // clone template
+                    const photoEl = itemPhotoTemplate.content.cloneNode(true);
+                    const photoFileInput = photoEl.querySelector('.photo-file-input');
+                    const photoCaptionInput = photoEl.querySelector('.photo-caption-input');
+                    const removePhotoBtn = photoEl.querySelector('.remove-dynamic-btn');
+                    
+                    photoCaptionInput.value = photo.caption;
+                    
+                    // reattatch saved file object to new input feild, preserve during rerender
+                    if (photo.file) {
+                         const dataTransfer = new DataTransfer();
+                         dataTransfer.items.add(photo.file);
+                         photoFileInput.files = dataTransfer.files;
+                    }
+
+                    // update items' states when interacted with 
+                    photoFileInput.addEventListener('change', (e) => {
+                        if (e.target.files.length > 0) {
+                            item.photos[photoIdx].file = e.target.files[0];
+                        }
+                    });
+                    photoCaptionInput.addEventListener('input', (e) => {
+                        item.photos[photoIdx].caption = e.target.value;
+                    });
+                    removePhotoBtn.addEventListener('click', () => removeItemPhoto(itemIdx, photoIdx));
+
+                    // add rendered photo elements to item card
+                    itemPhotosContainer.appendChild(photoEl);
+                });
+
+                // add "add photo" and "remove" buttons to the new item card
+                itemEl.querySelector('.add-item-photo-btn').addEventListener('click', () => addItemPhoto(itemIdx));
+                itemEl.querySelector('.remove-item-btn').addEventListener('click', () => removeFavoriteItem(itemIdx));
+
+                // insert the element
+                favoriteItemsContainer.appendChild(itemEl);
+            });
+            
+            // apply gloabl limits
+            document.getElementById('add-visit-photo-button').disabled = visitState.visitPhotos.length >= MAX_VISIT_PHOTOS;
+            document.getElementById('add-item-button').disabled = visitState.favoriteItems.length >= MAX_FAVORITE_ITEMS;
+
+            
+        }
+
+        // state modification handler for visit photos
+        function addVisitPhoto() {
+            // c heck if number of photots hasnt reached the max, if so, add a new photo object
+            if (visitState.visitPhotos.length < MAX_VISIT_PHOTOS) {
+                visitState.visitPhotos.push({ file: null, caption: '' });
+                // re render
+                renderDynamicContent();
+                // find the new input feild and place the cursor on it
+                const newInputs = visitPhotosContainer.querySelectorAll('.visit-photo-file-input');
+                newInputs[newInputs.length - 1]?.focus();
+            }
+        }
+
+        // allows user to delete singe photo entry from form
+        function removeVisitPhoto(index) {
+            visitState.visitPhotos.splice(index, 1);
+            renderDynamicContent();
+        }
+
+        // state modification handler for favorite items
+        function addFavoriteItem() {
+            // check if max, push new object if not
+            if (visitState.favoriteItems.length < MAX_FAVORITE_ITEMS) {
+                visitState.favoriteItems.push({ 
+                    name: '', 
+                    price: null, 
+                    rating: null, 
+                    description: '', 
+                    photos: [] 
+                });
+                renderDynamicContent();
+                const newItemContainers = favoriteItemsContainer.querySelectorAll('.favorite-item-card');
+                newItemContainers[newItemContainers.length - 1]?.querySelector('.item-name-input')?.focus();
+            }
+        }
+
+        // allow deletion
+        function removeFavoriteItem(index) {
+            visitState.favoriteItems.splice(index, 1);
+            renderDynamicContent();
+        }
+
+        // check if max, push new object if not
+        function addItemPhoto(itemIndex) {
+            const item = visitState.favoriteItems[itemIndex];
+            if (item && item.photos.length < MAX_ITEM_PHOTOS) {
+                item.photos.push({ file: null, caption: '' });
+                renderDynamicContent();
+            }
+        }
+
+        // allow deletion 
+        function removeItemPhoto(itemIndex, photoIndex) {
+            visitState.favoriteItems[itemIndex].photos.splice(photoIndex, 1);
+            renderDynamicContent();
+        }
+
+
+        // submission logic (AJAX/FormData) 
+        async function handleFormSubmit(e) {
+            // prevents browser's default action (sending form data with page reload)
+
+            e.preventDefault();
+
+            // set those status messages!
+            function setStatusMessage(message, type) {
+                statusMessage.classList.remove('hidden', 'status-positive-style', 'status-negative-style', 'status-neutral-style');
+                if (type === 'success') {
+                    statusMessage.classList.add('status-positive-style');
+                } else if (type === 'error') {
+                    statusMessage.classList.add('status-negative-style');
+                } else {
+                    statusMessage.classList.add('status-neutral-style');
+                }
+                statusMessage.textContent = message;
+            }
+
+            // status update!
+            setStatusMessage('Submitting visit... Please wait.', 'neutral');
+            document.getElementById('log-visit-button').disabled = true;
+
+            // collect standard form data
+            const formData = new FormData(form);
+            // removes csrf token (should be added back later in header)
+            formData.delete('csrfmiddlewaretoken'); 
+            
+            // prepare dynamic data for serialization
+            const dynamicData = { favoriteItems: [], };
+            let fileCounter = 0;
+
+            // process Favorite Items and Photos
+            visitState.favoriteItems.forEach((item) => {
+                // build item payload
+                const itemPayload = {
+                    name: item.name, price: item.price, rating: item.rating,
+                    description: item.description, photos: []
+                };
+                
+                // processing items
+                item.photos.forEach((photo) => {
+                    // create a filekey if it exists and add it to payload
+                    if (photo.file) {
+                        const fileKey = `file_${fileCounter++}`;
+                        formData.append(fileKey, photo.file, photo.file.name);
+                        itemPayload.photos.push({ file_key: fileKey, caption: photo.caption });
+                    // only a caption, add that
+                    } else if (photo.caption) {
+                        itemPayload.photos.push({ caption: photo.caption });
+                    }
+                });
+                // finalize item data
+                dynamicData.favoriteItems.push(itemPayload);
+            });
+
+            // process Visit Photos
+            const visitPhotoPayload = [];
+
+            // loop through the visit photos
+            visitState.visitPhotos.forEach((photo) => {
+                // file exits, make key, add to payload
+                if (photo.file) {
+                    const fileKey = `file_${fileCounter++}`;
+                    formData.append(fileKey, photo.file, photo.file.name);
+                    visitPhotoPayload.push({ file_key: fileKey, caption: photo.caption });
+                // only caption, add that
+                } else if (photo.caption) {
+                    visitPhotoPayload.push({ caption: photo.caption });
+                }
+            });
+            // finalize item data
+            dynamicData.visitPhotos = visitPhotoPayload;
+
+
+            // append the entire dynamic structure as a single JSON string
+            formData.append('dynamic_data', JSON.stringify(dynamicData));
+
+            // send data via fetch
+            try {
+                const response = await fetch(URL_ENDPOINT, {
+                    method: 'POST',
+                    // bring back that CSRF token!
+                    headers: {
+                        'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                    },
+                    body: formData
+                });
+
+                // submit button re-enabled
+                document.getElementById('log-visit-button').disabled = false;
+                const result = await response.json();
+
+                // success check 
+                if (response.ok) {
+                    setStatusMessage('Visit successfully logged! Redirecting...', 'success');
+                    
+                    setTimeout(() => window.location.href = result.redirect_url, 1500);
+                } else {
+                    setStatusMessage('Submission failed: ' + (result.detail || JSON.stringify(result)), 'error');
+                }
+            } catch (error) {
+                document.getElementById('log-visit-button').disabled = false;
+                console.error('Network Error:', error);
+                setStatusMessage('An unexpected error occurred. Check console for details.', 'error');
+            }
+        }
+
+
+        // initialization 
+        document.getElementById('add-visit-photo-button').addEventListener('click', addVisitPhoto);
+        document.getElementById('add-item-button').addEventListener('click', addFavoriteItem);
+        form.addEventListener('submit', handleFormSubmit);
+        
+        // collapsable logic
+        const visitPhotosSection = document.getElementById('visit-photos-section');
+        const favoriteItemsSection = document.getElementById('favorite-items-section');
+        
+        // Function to toggle the collapse state
+        function toggleCollapse(sectionElement) {
+            sectionElement.classList.toggle('collapsed');
+        }
+
+        // add event listeners to the header triggers (which are children of the sections)
+        visitPhotosSection.querySelector('.section-header-trigger').addEventListener('click', () => {
+            toggleCollapse(visitPhotosSection);
+        });
+
+        favoriteItemsSection.querySelector('.section-header-trigger').addEventListener('click', () => {
+            toggleCollapse(favoriteItemsSection);
+        });
+        // -------------------------
+
+
+        // initialize with one photo and one item group for immediate use
+        addVisitPhoto();
+        addFavoriteItem();
+        
+        // ensure favorite items starts collapsed (it is by default in HTML, but this confirms)
+        favoriteItemsSection.classList.add('collapsed');
+        
+        renderDynamicContent();
+    });
+</script>
+</body>
+
+{% endblock %}
